@@ -150,53 +150,48 @@ h2 {
   transform: scale(0.97);
 }
 
-/* 画板页 */
-.canvas-wrap {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  background: #1e1b4b;
-  border-radius: 16px;
-  border: 2px solid #4c1d95;
-  overflow: hidden;
-  margin-bottom: 16px;
-  touch-action: none;
-}
-
-.canvas-wrap canvas {
-  width: 100%;
-  height: 100%;
-  cursor: crosshair;
-}
-
-.canvas-hint {
-  text-align: center;
-  color: #94a3b8;
-  font-size: 13px;
-  margin-bottom: 16px;
-}
-
-.canvas-tools {
-  display: flex;
-  justify-content: center;
+/* 图案选择页 */
+.pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 20px;
 }
 
-.tool-btn {
-  padding: 8px 16px;
-  border: 1px solid #4c1d95;
-  border-radius: 8px;
+.pattern-card {
+  aspect-ratio: 1;
   background: #1e1b4b;
-  color: #c4b5fd;
-  font-size: 13px;
+  border: 2px solid #334155;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
+  padding: 8px;
 }
 
-.tool-btn:active, .tool-btn.active {
-  background: #4c1d95;
-  color: #fff;
+.pattern-card .pattern-icon {
+  font-size: 36px;
+  margin-bottom: 6px;
+}
+
+.pattern-card .pattern-name {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.pattern-card.selected {
+  border-color: #7c3aed;
+  background: #2e1065;
+  box-shadow: 0 0 16px rgba(124,58,237,0.4);
+  transform: scale(1.05);
+}
+
+.pattern-card:active {
+  transform: scale(0.95);
 }
 
 /* 颜色选择 */
@@ -664,8 +659,8 @@ h2 {
     <button class="btn-primary" onclick="startTest()">开始读心 →</button>
   </div>
 
-  <!-- Step 1: 画板 -->
-  <div class="page" id="page-draw">
+  <!-- Step 1: 图案选择 -->
+  <div class="page" id="page-pattern">
     <div class="step-indicator" id="steps-1">
       <div class="step-dot active"></div>
       <div class="step-dot"></div>
@@ -673,16 +668,10 @@ h2 {
       <div class="step-dot"></div>
       <div class="step-dot"></div>
     </div>
-    <h2>凭直觉画一个图形</h2>
-    <p class="canvas-hint">不用想太多，随手画就好</p>
-    <div class="canvas-wrap">
-      <canvas id="drawCanvas"></canvas>
-    </div>
-    <div class="canvas-tools">
-      <button class="tool-btn" onclick="clearCanvas()">清除</button>
-      <button class="tool-btn" onclick="undoCanvas()">撤销</button>
-    </div>
-    <button class="btn-primary" onclick="submitDraw()">画好了 →</button>
+    <h2 id="patternTitle">选一个最吸引你的图案</h2>
+    <p class="subtitle">凭直觉，不要想太多</p>
+    <div class="pattern-grid" id="patternGrid"></div>
+    <button class="btn-primary" id="btnPattern" onclick="submitPattern()" disabled>选好了 →</button>
   </div>
 
   <!-- Step 2: 颜色选择 -->
@@ -877,12 +866,119 @@ const ALL_DOORS = [
   { icon: '⚡', color: '#eab308', label: '雷电环绕的门', trait: 'warrior' },
 ];
 
-const DRAW_PROMPTS = [
-  { title: '凭直觉画一个图形', hint: '不用想太多，随手画就好' },
-  { title: '画出你脑海中的第一个形状', hint: '闭上眼3秒，睁开眼就画' },
-  { title: '画一个代表你现在心情的图案', hint: '没有对错，跟着手走' },
-  { title: '画出你梦里出现过的东西', hint: '模糊的也可以，画个大概' },
-  { title: '随便画，画到你觉得可以停了', hint: '你的手比大脑更诚实' },
+const PATTERN_SETS = [
+  {
+    title: '选一个最吸引你的图案',
+    patterns: [
+      { icon: '🌀', name: '漩涡', energy: 'high', style: 'chaotic', shape: 'balanced' },
+      { icon: '💎', name: '钻石', energy: 'medium', style: 'detailed', shape: 'tall' },
+      { icon: '🌊', name: '波浪', energy: 'high', style: 'chaotic', shape: 'wide' },
+      { icon: '⭐', name: '星星', energy: 'medium', style: 'detailed', shape: 'balanced' },
+      { icon: '🔺', name: '三角', energy: 'medium', style: 'simple', shape: 'tall' },
+      { icon: '🍃', name: '叶子', energy: 'low', style: 'simple', shape: 'tall' },
+      { icon: '🔥', name: '火焰', energy: 'high', style: 'chaotic', shape: 'tall' },
+      { icon: '❄️', name: '雪花', energy: 'low', style: 'detailed', shape: 'balanced' },
+      { icon: '☁️', name: '云朵', energy: 'low', style: 'simple', shape: 'wide' },
+    ]
+  },
+  {
+    title: '哪个符号让你感到平静？',
+    patterns: [
+      { icon: '☯️', name: '太极', energy: 'low', style: 'simple', shape: 'balanced' },
+      { icon: '🌙', name: '月亮', energy: 'low', style: 'simple', shape: 'balanced' },
+      { icon: '🦋', name: '蝴蝶', energy: 'medium', style: 'detailed', shape: 'wide' },
+      { icon: '🌸', name: '花朵', energy: 'low', style: 'detailed', shape: 'balanced' },
+      { icon: '🕊️', name: '白鸽', energy: 'medium', style: 'simple', shape: 'wide' },
+      { icon: '🫧', name: '泡泡', energy: 'low', style: 'chaotic', shape: 'balanced' },
+      { icon: '🎐', name: '风铃', energy: 'low', style: 'detailed', shape: 'tall' },
+      { icon: '💫', name: '流星', energy: 'high', style: 'chaotic', shape: 'wide' },
+      { icon: '🪷', name: '莲花', energy: 'low', style: 'detailed', shape: 'balanced' },
+    ]
+  },
+  {
+    title: '如果你是一种图形，你是？',
+    patterns: [
+      { icon: '⬛', name: '方块', energy: 'medium', style: 'simple', shape: 'balanced' },
+      { icon: '⚫', name: '圆形', energy: 'low', style: 'simple', shape: 'balanced' },
+      { icon: '🔷', name: '菱形', energy: 'medium', style: 'detailed', shape: 'tall' },
+      { icon: '✳️', name: '米字', energy: 'high', style: 'chaotic', shape: 'balanced' },
+      { icon: '♾️', name: '无限', energy: 'high', style: 'chaotic', shape: 'wide' },
+      { icon: '🔻', name: '倒三角', energy: 'medium', style: 'simple', shape: 'tall' },
+      { icon: '⬡', name: '六边形', energy: 'medium', style: 'detailed', shape: 'balanced' },
+      { icon: '✦', name: '四角星', energy: 'high', style: 'detailed', shape: 'balanced' },
+      { icon: '〰️', name: '波浪线', energy: 'low', style: 'chaotic', shape: 'wide' },
+    ]
+  },
+  {
+    title: '哪个让你想到"力量"？',
+    patterns: [
+      { icon: '⚡', name: '闪电', energy: 'high', style: 'chaotic', shape: 'tall' },
+      { icon: '🌋', name: '火山', energy: 'high', style: 'chaotic', shape: 'tall' },
+      { icon: '🏔️', name: '山峰', energy: 'medium', style: 'simple', shape: 'tall' },
+      { icon: '🦁', name: '狮子', energy: 'high', style: 'detailed', shape: 'balanced' },
+      { icon: '🐉', name: '龙', energy: 'high', style: 'detailed', shape: 'wide' },
+      { icon: '🗡️', name: '剑', energy: 'high', style: 'simple', shape: 'tall' },
+      { icon: '🛡️', name: '盾', energy: 'medium', style: 'simple', shape: 'balanced' },
+      { icon: '🌪️', name: '龙卷风', energy: 'high', style: 'chaotic', shape: 'tall' },
+      { icon: '🪨', name: '磐石', energy: 'low', style: 'simple', shape: 'balanced' },
+    ]
+  },
+  {
+    title: '深夜看到哪个你会多看一眼？',
+    patterns: [
+      { icon: '👁️', name: '眼睛', energy: 'medium', style: 'detailed', shape: 'wide' },
+      { icon: '🕸️', name: '蛛网', energy: 'low', style: 'detailed', shape: 'balanced' },
+      { icon: '🔮', name: '水晶球', energy: 'medium', style: 'detailed', shape: 'balanced' },
+      { icon: '🌑', name: '暗月', energy: 'low', style: 'simple', shape: 'balanced' },
+      { icon: '🗝️', name: '钥匙', energy: 'medium', style: 'simple', shape: 'tall' },
+      { icon: '🪞', name: '镜子', energy: 'low', style: 'simple', shape: 'tall' },
+      { icon: '🕯️', name: '烛光', energy: 'low', style: 'simple', shape: 'tall' },
+      { icon: '🐍', name: '蛇', energy: 'medium', style: 'chaotic', shape: 'wide' },
+      { icon: '🌌', name: '星河', energy: 'high', style: 'chaotic', shape: 'wide' },
+    ]
+  },
+  {
+    title: '如果你的灵魂有形状，它是？',
+    patterns: [
+      { icon: '🫀', name: '心脏', energy: 'high', style: 'detailed', shape: 'balanced' },
+      { icon: '🧿', name: '护符', energy: 'medium', style: 'detailed', shape: 'balanced' },
+      { icon: '🪐', name: '行星', energy: 'medium', style: 'simple', shape: 'balanced' },
+      { icon: '🌈', name: '彩虹', energy: 'high', style: 'chaotic', shape: 'wide' },
+      { icon: '🕳️', name: '黑洞', energy: 'high', style: 'chaotic', shape: 'balanced' },
+      { icon: '🧊', name: '冰块', energy: 'low', style: 'simple', shape: 'balanced' },
+      { icon: '🩸', name: '血滴', energy: 'high', style: 'simple', shape: 'tall' },
+      { icon: '🪶', name: '羽毛', energy: 'low', style: 'simple', shape: 'tall' },
+      { icon: '⚙️', name: '齿轮', energy: 'medium', style: 'detailed', shape: 'balanced' },
+    ]
+  },
+  {
+    title: '选一个你想触摸的东西',
+    patterns: [
+      { icon: '🧸', name: '玩偶', energy: 'low', style: 'simple', shape: 'balanced' },
+      { icon: '🪸', name: '珊瑚', energy: 'medium', style: 'chaotic', shape: 'balanced' },
+      { icon: '🧲', name: '磁铁', energy: 'high', style: 'simple', shape: 'wide' },
+      { icon: '🌵', name: '仙人掌', energy: 'medium', style: 'simple', shape: 'tall' },
+      { icon: '🍯', name: '蜂蜜', energy: 'low', style: 'simple', shape: 'balanced' },
+      { icon: '⛓️', name: '锁链', energy: 'high', style: 'detailed', shape: 'wide' },
+      { icon: '🧬', name: '基因', energy: 'medium', style: 'detailed', shape: 'tall' },
+      { icon: '🎭', name: '面具', energy: 'medium', style: 'detailed', shape: 'balanced' },
+      { icon: '🪄', name: '魔法棒', energy: 'high', style: 'simple', shape: 'tall' },
+    ]
+  },
+  {
+    title: '哪个图案代表你的内心？',
+    patterns: [
+      { icon: '🌀', name: '迷宫', energy: 'medium', style: 'chaotic', shape: 'balanced' },
+      { icon: '🎪', name: '帐篷', energy: 'high', style: 'detailed', shape: 'tall' },
+      { icon: '🏚️', name: '废墟', energy: 'low', style: 'chaotic', shape: 'wide' },
+      { icon: '🎡', name: '摩天轮', energy: 'medium', style: 'detailed', shape: 'balanced' },
+      { icon: '⛩️', name: '鸟居', energy: 'medium', style: 'simple', shape: 'tall' },
+      { icon: '🌅', name: '日落', energy: 'low', style: 'simple', shape: 'wide' },
+      { icon: '🎆', name: '烟花', energy: 'high', style: 'chaotic', shape: 'balanced' },
+      { icon: '🏝️', name: '孤岛', energy: 'low', style: 'simple', shape: 'balanced' },
+      { icon: '🚀', name: '火箭', energy: 'high', style: 'simple', shape: 'tall' },
+    ]
+  },
 ];
 
 const PERSONALITIES = {
@@ -1145,11 +1241,10 @@ const PERSONALITIES = {
 let currentImageTest = null;
 let currentWords = [];
 let currentDoors = [];
-let currentDrawPrompt = null;
+let currentPatternSet = null;
 
 let userChoices = {
-  drawData: null,
-  drawTraits: null,
+  patternChoice: null,
   colors: [],
   imageChoice: null,
   wordChoice: null,
@@ -1173,139 +1268,40 @@ function randomizeQuestions() {
   currentImageTest = IMAGE_TESTS[Math.floor(Math.random() * IMAGE_TESTS.length)];
   currentWords = pickRandom(ALL_WORDS, 10);
   currentDoors = pickRandom(ALL_DOORS, 4);
-  currentDrawPrompt = DRAW_PROMPTS[Math.floor(Math.random() * DRAW_PROMPTS.length)];
+  currentPatternSet = PATTERN_SETS[Math.floor(Math.random() * PATTERN_SETS.length)];
 }
 
-// ========== 画板 ==========
+// ========== 图案选择 ==========
 
-let canvas, ctx;
-let drawing = false;
-let paths = [];
-let currentPath = [];
+let selectedPattern = null;
 
-function initCanvas() {
-  canvas = document.getElementById('drawCanvas');
-  const wrap = canvas.parentElement;
-  const rect = wrap.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = '#a78bfa';
+function initPatterns() {
+  const grid = document.getElementById('patternGrid');
+  grid.innerHTML = '';
+  selectedPattern = null;
+  document.getElementById('btnPattern').disabled = true;
+  document.getElementById('patternTitle').textContent = currentPatternSet.title;
 
-  canvas.addEventListener('pointerdown', startDraw);
-  canvas.addEventListener('pointermove', doDraw);
-  canvas.addEventListener('pointerup', endDraw);
-  canvas.addEventListener('pointerleave', endDraw);
+  currentPatternSet.patterns.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'pattern-card';
+    div.innerHTML = `<div class="pattern-icon">${p.icon}</div><div class="pattern-name">${p.name}</div>`;
+    div.onclick = () => {
+      grid.querySelectorAll('.pattern-card').forEach(c => c.classList.remove('selected'));
+      div.classList.add('selected');
+      selectedPattern = p;
+      document.getElementById('btnPattern').disabled = false;
+    };
+    grid.appendChild(div);
+  });
 }
 
-function getPos(e) {
-  const rect = canvas.getBoundingClientRect();
-  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-}
-
-function startDraw(e) {
-  drawing = true;
-  currentPath = [getPos(e)];
-  ctx.beginPath();
-  ctx.moveTo(currentPath[0].x, currentPath[0].y);
-}
-
-function doDraw(e) {
-  if (!drawing) return;
-  const pos = getPos(e);
-  currentPath.push(pos);
-  ctx.lineTo(pos.x, pos.y);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(pos.x, pos.y);
-}
-
-function endDraw() {
-  if (!drawing) return;
-  drawing = false;
-  if (currentPath.length > 1) {
-    paths.push([...currentPath]);
-  }
-  currentPath = [];
-}
-
-function clearCanvas() {
-  const dpr = window.devicePixelRatio || 1;
-  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-  paths = [];
-}
-
-function undoCanvas() {
-  paths.pop();
-  redrawCanvas();
-}
-
-function redrawCanvas() {
-  const dpr = window.devicePixelRatio || 1;
-  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-  for (const path of paths) {
-    ctx.beginPath();
-    ctx.moveTo(path[0].x, path[0].y);
-    for (let i = 1; i < path.length; i++) {
-      ctx.lineTo(path[i].x, path[i].y);
-    }
-    ctx.stroke();
-  }
-}
-
-function analyzeDrawing() {
-  if (paths.length === 0) return { shape: 'none', energy: 'low', style: 'minimal' };
-
-  let totalPoints = 0;
-  let totalLength = 0;
-  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
-  let dirChanges = 0;
-
-  for (const path of paths) {
-    totalPoints += path.length;
-    for (let i = 1; i < path.length; i++) {
-      const dx = path[i].x - path[i-1].x;
-      const dy = path[i].y - path[i-1].y;
-      totalLength += Math.sqrt(dx*dx + dy*dy);
-      if (path[i].x < xMin) xMin = path[i].x;
-      if (path[i].x > xMax) xMax = path[i].x;
-      if (path[i].y < yMin) yMin = path[i].y;
-      if (path[i].y > yMax) yMax = path[i].y;
-    }
-    for (let i = 2; i < path.length; i++) {
-      const d1x = path[i-1].x - path[i-2].x;
-      const d1y = path[i-1].y - path[i-2].y;
-      const d2x = path[i].x - path[i-1].x;
-      const d2y = path[i].y - path[i-1].y;
-      const cross = d1x * d2y - d1y * d2x;
-      if (Math.abs(cross) > 5) dirChanges++;
-    }
-  }
-
-  const width = xMax - xMin;
-  const height = yMax - yMin;
-  const area = width * height;
-  const density = totalPoints / Math.max(area, 1) * 1000;
-  const complexity = dirChanges / Math.max(totalPoints, 1);
-
-  let energy = totalLength > 500 ? 'high' : totalLength > 200 ? 'medium' : 'low';
-  let style = complexity > 0.3 ? 'chaotic' : paths.length > 3 ? 'detailed' : 'simple';
-  let shape = width/height > 1.5 ? 'wide' : height/width > 1.5 ? 'tall' : 'balanced';
-
-  return { energy, style, shape, totalLength, paths: paths.length, density };
-}
-
-function submitDraw() {
-  if (paths.length === 0) {
-    showToast('画点什么吧，随便画就好~');
+function submitPattern() {
+  if (!selectedPattern) {
+    showToast('选一个图案吧~');
     return;
   }
-  userChoices.drawTraits = analyzeDrawing();
+  userChoices.patternChoice = selectedPattern;
   showPage('page-color');
 }
 
@@ -1449,29 +1445,29 @@ function generateReport() {
   const keys = Object.keys(PERSONALITIES);
   keys.forEach(k => scores[k] = 0);
 
-  // 画板分析影响
-  const draw = userChoices.drawTraits || {};
-  if (draw.energy === 'high') {
+  // 图案选择影响
+  const pattern = userChoices.patternChoice || {};
+  if (pattern.energy === 'high') {
     scores.fire_warrior += 3; scores.chaos_artist += 2; scores.phoenix_rebel += 2; scores.flame_romantic += 1;
   }
-  if (draw.energy === 'medium') {
+  if (pattern.energy === 'medium') {
     scores.shadow_mirror += 1; scores.time_wanderer += 1; scores.crystal_analyst += 1;
   }
-  if (draw.energy === 'low') {
+  if (pattern.energy === 'low') {
     scores.ocean_sage += 2; scores.garden_healer += 2; scores.cloud_drifter += 2; scores.time_wanderer += 1;
   }
-  if (draw.style === 'chaotic') {
+  if (pattern.style === 'chaotic') {
     scores.chaos_artist += 3; scores.mystic_dreamer += 1; scores.cloud_drifter += 2; scores.flame_romantic += 1;
   }
-  if (draw.style === 'simple') {
+  if (pattern.style === 'simple') {
     scores.ocean_sage += 2; scores.wild_wolf += 2; scores.garden_healer += 1;
   }
-  if (draw.style === 'detailed') {
+  if (pattern.style === 'detailed') {
     scores.crystal_analyst += 3; scores.mystic_dreamer += 1; scores.time_wanderer += 1;
   }
-  if (draw.shape === 'wide') { scores.fire_warrior += 1; scores.phoenix_rebel += 1; }
-  if (draw.shape === 'tall') { scores.mystic_dreamer += 1; scores.cloud_drifter += 1; }
-  if (draw.shape === 'balanced') { scores.shadow_mirror += 1; scores.crystal_analyst += 1; }
+  if (pattern.shape === 'wide') { scores.fire_warrior += 1; scores.phoenix_rebel += 1; }
+  if (pattern.shape === 'tall') { scores.mystic_dreamer += 1; scores.cloud_drifter += 1; }
+  if (pattern.shape === 'balanced') { scores.shadow_mirror += 1; scores.crystal_analyst += 1; }
 
   // 颜色影响
   userChoices.colors.forEach(ci => {
@@ -1594,21 +1590,19 @@ function showPage(id) {
 
 function startTest() {
   randomizeQuestions();
-  document.querySelector('#page-draw h2').textContent = currentDrawPrompt.title;
-  document.querySelector('#page-draw .canvas-hint').textContent = currentDrawPrompt.hint;
+  initPatterns();
   initColors();
   initImage();
   initWords();
   initDoors();
-  showPage('page-draw');
-  setTimeout(initCanvas, 100);
+  showPage('page-pattern');
 }
 
 function restart() {
-  userChoices = { drawData: null, drawTraits: null, colors: [], imageChoice: null, wordChoice: null, doorChoice: null };
-  paths = [];
-  currentPath = [];
+  userChoices = { patternChoice: null, colors: [], imageChoice: null, wordChoice: null, doorChoice: null };
+  selectedPattern = null;
   randomizeQuestions();
+  initPatterns();
   initColors();
   initImage();
   initWords();
