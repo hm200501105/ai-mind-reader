@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI读心术</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0a0a1a;
+  color: #fff;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* 星空背景 */
+.stars {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: #fff;
+  border-radius: 50%;
+  animation: twinkle var(--duration) infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+/* 页面通用 */
+.page {
+  display: none;
+  position: relative;
+  z-index: 1;
+  animation: fadeIn 0.6s ease;
+}
+
+.page.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+h1 {
+  font-size: 28px;
+  text-align: center;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+h2 {
+  font-size: 20px;
+  text-align: center;
+  margin-bottom: 16px;
+  color: #c4b5fd;
+}
+
+.subtitle {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #334155;
+  transition: all 0.3s;
+}
+
+.step-dot.active {
+  background: #a78bfa;
+  box-shadow: 0 0 8px #a78bfa;
+}
+
+.step-dot.done {
+  background: #34d399;
+}
+
+/* 首页 */
+.intro-icon {
+  text-align: center;
+  font-size: 80px;
+  margin: 40px 0 20px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.intro-desc {
+  text-align: center;
+  color: #cbd5e1;
+  font-size: 15px;
+  line-height: 1.8;
+  margin-bottom: 40px;
+}
+
+.btn-primary {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #3b82f6);
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+}
+
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+/* 画板页 */
+.canvas-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #1e1b4b;
+  border-radius: 16px;
+  border: 2px solid #4c1d95;
+  overflow: hidden;
+  margin-bottom: 16px;
+  touch-action: none;
+}
+
+.canvas-wrap canvas {
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.canvas-hint {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.canvas-tools {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tool-btn {
+  padding: 8px 16px;
+  border: 1px solid #4c1d95;
+  border-radius: 8px;
+  background: #1e1b4b;
+  color: #c4b5fd;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tool-btn:active, .tool-btn.active {
+  background: #4c1d95;
+  color: #fff;
+}
+
+/* 颜色选择 */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.color-card {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 3px solid transparent;
+  position: relative;
+}
+
+.color-card.selected {
+  border-color: #fff;
+  transform: scale(0.92);
+  box-shadow: 0 0 20px rgba(255,255,255,0.3);
+}
+
+.color-card.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 28px;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.color-card.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* 图片选择 */
+.image-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.image-option {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 3px solid #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 50px;
+  background: #1e1b4b;
+}
+
+.image-option:active {
+  transform: scale(0.95);
+}
+
+.image-option.selected {
+  border-color: #a78bfa;
+  background: #2e1065;
+  box-shadow: 0 0 15px rgba(167,139,250,0.3);
+}
+
+/* 词云选择 */
+.word-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.word-tag {
+  padding: 10px 18px;
+  border-radius: 20px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #cbd5e1;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.word-tag:active {
+  transform: scale(0.95);
+}
+
+.word-tag.selected {
+  border-color: #a78bfa;
+  background: #4c1d95;
+  color: #fff;
+}
+
+/* 门选择 */
+.door-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.door-card {
+  padding: 20px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 2px solid #1e293b;
+  text-align: center;
+  background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
+}
+
+.door-card:active {
+  transform: scale(0.95);
+}
+
+.door-card.selected {
+  border-color: #a78bfa;
+  box-shadow: 0 0 20px rgba(167,139,250,0.3);
+}
+
+.door-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.door-label {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* 加载页 */
+.loading-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  text-align: center;
+}
+
+.brain-scan {
+  width: 150px;
+  height: 150px;
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.brain-icon {
+  font-size: 80px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+.scan-ring {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px solid #7c3aed;
+  border-radius: 50%;
+  animation: scan-rotate 2s linear infinite;
+}
+
+.scan-ring::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background: #a78bfa;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #a78bfa;
+}
+
+.scan-ring:nth-child(2) {
+  top: 15px; left: 15px; right: 15px; bottom: 15px;
+  border-color: #3b82f6;
+  animation-direction: reverse;
+  animation-duration: 3s;
+}
+
+.scan-ring:nth-child(2)::before {
+  background: #60a5fa;
+  box-shadow: 0 0 10px #60a5fa;
+}
+
+@keyframes scan-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  color: #a78bfa;
+  font-size: 16px;
+  margin-bottom: 12px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.loading-detail {
+  color: #64748b;
+  font-size: 13px;
+  max-width: 280px;
+}
+
+.loading-progress {
+  width: 200px;
+  height: 4px;
+  background: #1e293b;
+  border-radius: 2px;
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+.loading-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6, #34d399);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+/* 报告页 */
+.report-card {
+  background: linear-gradient(135deg, #1e1b4b, #0f172a);
+  border: 1px solid #4c1d95;
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.report-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.report-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  border: 3px solid #7c3aed;
+  box-shadow: 0 0 20px rgba(124,58,237,0.4);
+}
+
+.report-type {
+  font-size: 22px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 4px;
+}
+
+.report-subtitle {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.report-section {
+  margin-bottom: 20px;
+}
+
+.report-section-title {
+  font-size: 14px;
+  color: #a78bfa;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trait-bar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.trait-label {
+  width: 70px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.trait-track {
+  flex: 1;
+  height: 6px;
+  background: #1e293b;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.trait-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 1s ease;
+}
+
+.trait-value {
+  width: 36px;
+  text-align: right;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.secret-list {
+  list-style: none;
+}
+
+.secret-list li {
+  padding: 10px 12px;
+  background: #0f172a;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #e2e8f0;
+  border-left: 3px solid #7c3aed;
+}
+
+.soul-colors {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.soul-color {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+}
+
+.report-quote {
+  text-align: center;
+  font-style: italic;
+  color: #94a3b8;
+  font-size: 14px;
+  padding: 16px;
+  border-top: 1px solid #1e293b;
+  margin-top: 16px;
+}
+
+.btn-share {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #7c3aed;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #a78bfa;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 12px;
+}
+
+.btn-share:active {
+  background: #7c3aed;
+  color: #fff;
+}
+
+.btn-restart {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  color: #64748b;
+  background: #1e293b;
+  cursor: pointer;
+}
+
+/* 提示弹窗 */
+.toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  background: rgba(124,58,237,0.9);
+  border-radius: 8px;
+  font-size: 14px;
+  color: #fff;
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.toast.show {
+  opacity: 1;
+}
+</style>
+</head>
+<body>
+
+<!-- 星空背景 -->
+<div class="stars" id="stars"></div>
+
+<div class="container">
+  <!-- 首页 -->
+  <div class="page active" id="page-intro">
+    <div class="intro-icon">🔮</div>
+    <h1>AI 读心术</h1>
+    <p class="subtitle">你的潜意识，我全都知道</p>
+    <p class="intro-desc">
+      通过你的直觉反应<br>
+      AI将深度解析你的隐藏人格<br>
+      揭示那些你没说出口的秘密
+    </p>
+    <button class="btn-primary" onclick="startTest()">开始读心 →</button>
+  </div>
+
+  <!-- Step 1: 画板 -->
+  <div class="page" id="page-draw">
+    <div class="step-indicator" id="steps-1">
+      <div class="step-dot active"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+    <h2>凭直觉画一个图形</h2>
+    <p class="canvas-hint">不用想太多，随手画就好</p>
+    <div class="canvas-wrap">
+      <canvas id="drawCanvas"></canvas>
+    </div>
+    <div class="canvas-tools">
+      <button class="tool-btn" onclick="clearCanvas()">清除</button>
+      <button class="tool-btn" onclick="undoCanvas()">撤销</button>
+    </div>
+    <button class="btn-primary" onclick="submitDraw()">画好了 →</button>
+  </div>
+
+  <!-- Step 2: 颜色选择 -->
+  <div class="page" id="page-color">
+    <div class="step-indicator" id="steps-2">
+      <div class="step-dot done"></div>
+      <div class="step-dot active"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+    <h2>选3个让你最舒服的颜色</h2>
+    <p class="subtitle">凭第一感觉，不要犹豫</p>
+    <div class="color-grid" id="colorGrid"></div>
+    <button class="btn-primary" id="btnColor" onclick="submitColor()" disabled>已选 0/3</button>
+  </div>
+
+  <!-- Step 3: 图片联想 -->
+  <div class="page" id="page-image">
+    <div class="step-indicator" id="steps-3">
+      <div class="step-dot done"></div>
+      <div class="step-dot done"></div>
+      <div class="step-dot active"></div>
+      <div class="step-dot"></div>
+      <div class="step-dot"></div>
+    </div>
+    <h2>你第一眼看到了什么？</h2>
+    <p class="subtitle">凝视下方图案，选择你的直觉</p>
+    <div class="image-options" id="imageOptions"></div>
+  </div>
+
+  <!-- Step 4: 词语选择 -->
+  <div class="page" id="page-word">
+    <div class="step-indicator" id="steps-4">
+      <div class="step-dot done"></div>
+      <div class="step-dot done"></div>
+      <div class="step-dot done"></div>
+      <div class="step-dot active"></div>
+      <div class="step-dot"></div>
+    </div>
+    <h2>选一个词形容今天的自己</h2>
+    <p class="subtitle">哪个词最先打动你</p>
+    <div class="word-cloud" id="wordCloud"></div>
+  </div>
+
+  <!-- Step 5: 选门 -->
+  <div class="page" id="page-door">
+    <div class="step-indicator" id="steps-5">
+      <div class="step-dot done"></div>
+      <div class="step-dot done"></div>
+      <div class="step-dot done"></div>
+      <div class="step-dot done"></div>
+      <div class="step-dot active"></div>
+    </div>
+    <h2>选一扇门走进去</h2>
+    <p class="subtitle">直觉告诉你哪扇门后面有答案</p>
+    <div class="door-options" id="doorOptions"></div>
+  </div>
+
+  <!-- 加载页 -->
+  <div class="page loading-page" id="page-loading">
+    <div class="brain-scan">
+      <div class="scan-ring"></div>
+      <div class="scan-ring"></div>
+      <div class="brain-icon">🧠</div>
+    </div>
+    <div class="loading-text" id="loadingText">正在连接神经网络...</div>
+    <div class="loading-detail" id="loadingDetail">解析你的潜意识数据</div>
+    <div class="loading-progress">
+      <div class="loading-bar" id="loadingBar"></div>
+    </div>
+  </div>
+
+  <!-- 报告页 -->
+  <div class="page" id="page-report">
+    <h2 style="margin-bottom:20px;">🔮 读心报告</h2>
+    <div class="report-card" id="reportCard"></div>
+    <button class="btn-primary" onclick="saveReport()" style="margin-bottom:12px;">保存报告截图</button>
+    <button class="btn-restart" onclick="restart()">再测一次</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== 数据配置 ==========
+
+const COLORS = [
+  { hex: '#ef4444', name: '热情红', trait: 'passion' },
+  { hex: '#f97316', name: '活力橙', trait: 'energy' },
+  { hex: '#eab308', name: '阳光黄', trait: 'optimism' },
+  { hex: '#22c55e', name: '生机绿', trait: 'harmony' },
+  { hex: '#06b6d4', name: '通透青', trait: 'clarity' },
+  { hex: '#3b82f6', name: '深邃蓝', trait: 'wisdom' },
+  { hex: '#8b5cf6', name: '神秘紫', trait: 'intuition' },
+  { hex: '#ec4899', name: '浪漫粉', trait: 'romance' },
+  { hex: '#1e293b', name: '静谧黑', trait: 'depth' },
+];
+
+const IMAGE_TESTS = [
+  {
+    emoji: '🌀',
+    question: '盯着这个漩涡，你感受到...',
+    options: [
+      { text: '被吸入深处', icon: '🕳️', trait: 'seeker' },
+      { text: '旋转的能量', icon: '💫', trait: 'dynamic' },
+      { text: '平静的秩序', icon: '☯️', trait: 'balanced' },
+      { text: '无限的可能', icon: '✨', trait: 'dreamer' },
+    ]
+  },
+  {
+    emoji: '🔥',
+    question: '这团火焰让你想到...',
+    options: [
+      { text: '毁灭与重生', icon: '🌋', trait: 'seeker' },
+      { text: '温暖的壁炉', icon: '🏠', trait: 'balanced' },
+      { text: '燃烧的野心', icon: '🚀', trait: 'dynamic' },
+      { text: '即将熄灭的烛光', icon: '🕯️', trait: 'dreamer' },
+    ]
+  },
+  {
+    emoji: '🌊',
+    question: '面对这片海浪，你的第一反应是...',
+    options: [
+      { text: '想跳进去', icon: '🏊', trait: 'dynamic' },
+      { text: '站在岸边静静看', icon: '🧘', trait: 'balanced' },
+      { text: '想知道海底有什么', icon: '🐚', trait: 'seeker' },
+      { text: '听见了某种旋律', icon: '🎵', trait: 'dreamer' },
+    ]
+  },
+  {
+    emoji: '🌑',
+    question: '这轮黑月亮，你觉得它在...',
+    options: [
+      { text: '隐藏着秘密', icon: '🔐', trait: 'seeker' },
+      { text: '等待被点亮', icon: '💡', trait: 'dreamer' },
+      { text: '吞噬一切', icon: '🕳️', trait: 'dynamic' },
+      { text: '安静地守护', icon: '🛡️', trait: 'balanced' },
+    ]
+  },
+  {
+    emoji: '⚡',
+    question: '一道闪电劈下来，你会...',
+    options: [
+      { text: '伸手去接', icon: '✋', trait: 'dynamic' },
+      { text: '闭眼许愿', icon: '🙏', trait: 'dreamer' },
+      { text: '数秒判断距离', icon: '🧮', trait: 'balanced' },
+      { text: '觉得是某种暗示', icon: '🔮', trait: 'seeker' },
+    ]
+  },
+];
+
+const ALL_WORDS = [
+  { text: '自由', trait: 'freedom' },
+  { text: '温暖', trait: 'warmth' },
+  { text: '锋利', trait: 'edge' },
+  { text: '迷雾', trait: 'mystery' },
+  { text: '星辰', trait: 'aspiration' },
+  { text: '潮汐', trait: 'rhythm' },
+  { text: '破碎', trait: 'rebel' },
+  { text: '笃定', trait: 'anchor' },
+  { text: '游离', trait: 'drift' },
+  { text: '炽热', trait: 'fire' },
+  { text: '空灵', trait: 'ethereal' },
+  { text: '野性', trait: 'wild' },
+  { text: '执念', trait: 'obsession' },
+  { text: '透明', trait: 'clarity_w' },
+  { text: '棱角', trait: 'edge' },
+  { text: '漂泊', trait: 'drift' },
+  { text: '烈酒', trait: 'fire' },
+  { text: '深渊', trait: 'mystery' },
+  { text: '日出', trait: 'aspiration' },
+  { text: '荆棘', trait: 'rebel' },
+  { text: '琥珀', trait: 'anchor' },
+  { text: '失重', trait: 'ethereal' },
+  { text: '原野', trait: 'wild' },
+  { text: '眩晕', trait: 'freedom' },
+];
+
+const ALL_DOORS = [
+  { icon: '🚪', color: '#7c3aed', label: '紫色光芒的门', trait: 'mystic' },
+  { icon: '🚪', color: '#3b82f6', label: '蓝色迷雾的门', trait: 'thinker' },
+  { icon: '🚪', color: '#22c55e', label: '绿光隐约的门', trait: 'healer' },
+  { icon: '🚪', color: '#ef4444', label: '红色火焰的门', trait: 'warrior' },
+  { icon: '🌀', color: '#06b6d4', label: '涌动漩涡的门', trait: 'mystic' },
+  { icon: '🌙', color: '#1e293b', label: '无尽暗夜的门', trait: 'thinker' },
+  { icon: '🌸', color: '#ec4899', label: '花瓣飘落的门', trait: 'healer' },
+  { icon: '⚡', color: '#eab308', label: '雷电环绕的门', trait: 'warrior' },
+];
+
+const DRAW_PROMPTS = [
+  { title: '凭直觉画一个图形', hint: '不用想太多，随手画就好' },
+  { title: '画出你脑海中的第一个形状', hint: '闭上眼3秒，睁开眼就画' },
+  { title: '画一个代表你现在心情的图案', hint: '没有对错，跟着手走' },
+  { title: '画出你梦里出现过的东西', hint: '模糊的也可以，画个大概' },
+  { title: '随便画，画到你觉得可以停了', hint: '你的手比大脑更诚实' },
+];
+
+const PERSONALITIES = {
+  mystic_dreamer: {
+    icon: '🌙',
+    type: '月光先知',
+    subtitle: '你的灵魂住在星河之间',
+    traits: { 直觉力: 92, 想象力: 88, 共情力: 75, 理性值: 45, 自由度: 82 },
+    colors: ['#7c3aed', '#3b82f6', '#1e293b'],
+    secrets: [
+      '你经常在凌晨3点突然清醒，脑子里冒出改变人生的想法',
+      '你对某个人的感觉从来没说过，但你确信对方能感受到',
+      '你曾经做过一个梦，后来竟然成真了一部分',
+      '你时常觉得自己不属于这个时代，像是从另一个维度来的',
+      '你有一种奇怪的直觉——在事情发生之前就隐约知道结局',
+      '你收藏了很多东西不是因为需要，而是因为它们"有故事"',
+      '你能感受到别人察觉不到的气氛变化，像一根隐形天线',
+    ],
+    quotes: [
+      '你不是在找答案，你是在等世界准备好听你的答案。',
+      '有些人追逐光，而你本身就在发光——只是光的频率别人看不见。',
+      '直觉是灵魂在偷偷给你递答案。',
+    ]
+  },
+  fire_warrior: {
+    icon: '⚡',
+    type: '雷霆行者',
+    subtitle: '你的血液里流着不安分的因子',
+    traits: { 行动力: 95, 感染力: 85, 抗压值: 90, 耐心值: 35, 野心指: 88 },
+    colors: ['#ef4444', '#f97316', '#eab308'],
+    secrets: [
+      '你嘴上说"随便"的时候，心里其实已经有了最优解',
+      '你最近一次发火，不是因为那件事，是因为积攒了太多没被看见',
+      '你曾放弃过一个让你心动的选择，至今偶尔还会想"如果当时…"',
+      '你对自己的要求比任何人对你的要求都高',
+      '你很少求助，不是因为不需要，是因为你觉得应该自己搞定',
+      '你有一个目标从没告诉任何人，因为说出来就不够酷了',
+      '别人觉得你强大，但你知道那只是因为你不允许自己脆弱',
+    ],
+    quotes: [
+      '世界不会给等待者让路，但会为冲锋者鼓掌。',
+      '你不是没有耐心，你只是不愿意把时间浪费在已经知道答案的事上。',
+      '燃烧不是消耗，是你存在的证据。',
+    ]
+  },
+  ocean_sage: {
+    icon: '🌊',
+    type: '深海智者',
+    subtitle: '你的平静下面藏着整片海洋',
+    traits: { 洞察力: 90, 忍耐力: 88, 分析力: 85, 表达欲: 40, 敏感度: 78 },
+    colors: ['#3b82f6', '#06b6d4', '#1e293b'],
+    secrets: [
+      '你在人群中经常突然感到格格不入，哪怕他们在夸你',
+      '你有一个反复出现的念头但从没告诉任何人',
+      '你能一秒看穿别人的谎言，但你选择不拆穿',
+      '你经常在对话中提前预判到对方下一句要说什么',
+      '你表面随和，但有一条底线一旦被触碰就绝不退让',
+      '你独处的时间比社交更让你充电，但你不会承认这叫"孤独"',
+      '你最近在思考一个大问题，但还没找到合适的人讨论',
+    ],
+    quotes: [
+      '看透一切的人不需要说太多，沉默本身就是力量。',
+      '深海不需要向任何人证明自己的深度。',
+      '你的安静不是空白，是满到溢出后的克制。',
+    ]
+  },
+  garden_healer: {
+    icon: '🌿',
+    type: '森林共感者',
+    subtitle: '你能听见别人心里没说出口的话',
+    traits: { 共情力: 95, 治愈力: 90, 觉察力: 82, 自我感: 48, 能量值: 65 },
+    colors: ['#22c55e', '#06b6d4', '#ec4899'],
+    secrets: [
+      '你给别人的建议总是对的，但你很少听自己的',
+      '你最近把一段情绪藏得很深，深到自己都快忘了它的形状',
+      '有人在心里默默感谢你，但你不知道',
+      '你总是先照顾别人的感受，然后才想起自己也需要被照顾',
+      '你很难拒绝别人，即使答应会让自己很累',
+      '你曾在深夜哭过但第二天假装什么都没发生',
+      '你害怕让别人失望，超过害怕让自己失望',
+    ],
+    quotes: [
+      '治愈别人是天赋，治愈自己才是这辈子的功课。',
+      '你是一座行走的庇护所，但别忘了你也需要一片屋檐。',
+      '温柔不是软弱，是看清了世界的粗糙之后仍然选择善良。',
+    ]
+  },
+  chaos_artist: {
+    icon: '🎭',
+    type: '混沌艺术家',
+    subtitle: '规则是给不会打破它的人准备的',
+    traits: { 创造力: 94, 叛逆值: 86, 适应力: 80, 规律性: 28, 灵感值: 92 },
+    colors: ['#ec4899', '#8b5cf6', '#eab308'],
+    secrets: [
+      '你害怕无聊远超过害怕失败',
+      '你正在经历一个"表面平静，内心翻天覆地"的阶段',
+      '你最好的想法都诞生在别人觉得你在发呆的时候',
+      '你开始了很多事情但完成的不到一半，不是懒，是下一个灵感来得太快',
+      '你能在任何东西里找到美感，包括别人觉得丑的东西',
+      '你的房间（或桌面）看起来很乱但你知道每样东西在哪',
+      '你很难被一种标签定义，连你自己都觉得自己是个矛盾体',
+    ],
+    quotes: [
+      '混乱不是你的敌人，是你的灵感缪斯。',
+      '你不是注意力分散，你是同时在平行宇宙里创造。',
+      '规则是路，但你选择了森林。',
+    ]
+  },
+  shadow_mirror: {
+    icon: '🪞',
+    type: '暗影镜像',
+    subtitle: '你同时活在两个自己之间',
+    traits: { 伪装力: 90, 自省力: 88, 矛盾值: 85, 控制欲: 72, 真实度: 55 },
+    colors: ['#1e293b', '#4c1d95', '#64748b'],
+    secrets: [
+      '你在不同人面前是完全不同的人，但每一个都是真的你',
+      '你有一个"公开自我"和一个"只有自己知道的自我"，它们差距很大',
+      '你曾经想过：如果所有人都真正了解我，还会喜欢我吗',
+      '你很擅长社交，但那消耗了你大量能量',
+      '你对自己的评价在"天才"和"骗子"之间反复横跳',
+      '你有时候会突然想：我现在的反应是真实的还是表演的',
+      '你曾删掉一条消息/朋友圈因为"那不像我"——但到底哪个才像你',
+    ],
+    quotes: [
+      '面具戴久了不是变成了面具，是发现面具下面还有一层面具。',
+      '你不是在做自己，你是在选择今天做哪个自己。',
+      '矛盾不需要解决，它本身就是完整。',
+    ]
+  },
+  time_wanderer: {
+    icon: '⏳',
+    type: '时间漫游者',
+    subtitle: '你活在过去和未来之间，很少真正停在现在',
+    traits: { 怀旧值: 85, 远见力: 88, 焦虑度: 72, 行动力: 55, 想象力: 90 },
+    colors: ['#eab308', '#7c3aed', '#06b6d4'],
+    secrets: [
+      '你经常在脑子里预演未来的对话，包括对方可能说的每种情况',
+      '你对过去某个时刻有莫名的怀念，但你说不清到底在怀念什么',
+      '你最近有一种"时间过得太快"的恐慌感',
+      '你会突然想起很久以前的一个细节，清晰到像刚发生一样',
+      '你对"来不及"这三个字有一种深层的恐惧',
+      '你有一个一直在推迟的计划，推迟的原因是"还没准备好"',
+      '你偶尔会想：如果能回到某一天，你会做什么不同的选择',
+    ],
+    quotes: [
+      '你不是活得慢，是活得深——每一刻都被你咀嚼了三遍。',
+      '过去不是包袱，是你随身携带的博物馆。',
+      '未来在等你，但它不着急——你也不必。',
+    ]
+  },
+  wild_wolf: {
+    icon: '🐺',
+    type: '孤野之狼',
+    subtitle: '你不需要狼群，但偶尔会对着月亮嚎叫',
+    traits: { 独立性: 95, 警觉度: 88, 忠诚值: 85, 依赖感: 25, 领地感: 78 },
+    colors: ['#1e293b', '#64748b', '#3b82f6'],
+    secrets: [
+      '你其实很在乎某些人，但你表达在乎的方式别人不一定看得懂',
+      '你最讨厌的不是被攻击，是被同情',
+      '你在某些时刻故意推开了一个走近你的人',
+      '你在独处时比在人群中更像真正的自己',
+      '你信任一个人需要很久，但一旦信任就是全部',
+      '你曾在该哭的时候选择了笑，因为你不想让任何人觉得你脆弱',
+      '你对"属于某个群体"这件事有一种本能的抗拒',
+    ],
+    quotes: [
+      '独行不是因为找不到同路人，是因为你的路本来就只有一条。',
+      '你不是冷，是把温度留给了值得的人。',
+      '狼不需要掌声，它需要的是足够大的旷野。',
+    ]
+  },
+  flame_romantic: {
+    icon: '🌹',
+    type: '烈焰浪漫者',
+    subtitle: '你把每一天都活成一首诗，哪怕没人在读',
+    traits: { 感受力: 95, 理想值: 90, 表达力: 82, 现实感: 38, 热烈度: 92 },
+    colors: ['#ef4444', '#ec4899', '#7c3aed'],
+    secrets: [
+      '你对一个人动心只需要一个瞬间，一个眼神或一句话就够了',
+      '你写过/想过一段文字，是关于一个你没勇气表达的感情',
+      '你曾因为一首歌、一个场景、一缕光线而突然红了眼眶',
+      '你活在某种"期待"里，你自己可能都不知道在期待什么',
+      '你对美有近乎偏执的敏感，丑的东西会物理性地让你难受',
+      '你很容易全身心投入一件事，然后突然失去所有兴趣',
+      '你心里住着一个永远18岁的自己，TA拒绝长大',
+    ],
+    quotes: [
+      '你不是多愁善感，你是活在别人感受不到的频率上。',
+      '浪漫不是天真，是看透了平庸之后的主动选择。',
+      '你的心是一片海，装得下所有波澜，也装得下所有宁静。',
+    ]
+  },
+  crystal_analyst: {
+    icon: '💎',
+    type: '水晶解构者',
+    subtitle: '你看世界的方式是把它拆成零件再重新组装',
+    traits: { 逻辑力: 94, 好奇心: 90, 怀疑值: 85, 感性度: 42, 精密度: 88 },
+    colors: ['#06b6d4', '#3b82f6', '#64748b'],
+    secrets: [
+      '你相信任何事情都有一个"真正的原因"，表面原因不算数',
+      '你经常觉得别人的逻辑有漏洞但不好意思指出来',
+      '你对自己不了解的领域有一种饥渴感，会忍不住去研究',
+      '你很难被营销话术打动，因为你第一反应是分析它的套路',
+      '你有时候觉得自己想太多了，但停不下来',
+      '你对"差不多就行了"这句话有生理性不适',
+      '你曾因为一个小细节而推翻了自己之前的整个判断',
+    ],
+    quotes: [
+      '真相不在表面，而在第三层——第一层是现象，第二层是解释，第三层才是本质。',
+      '你不是挑剔，你是精确。世界配不上你的标准。',
+      '好奇心不是缺点，是你的超能力电池。',
+    ]
+  },
+  phoenix_rebel: {
+    icon: '🔥',
+    type: '浴火叛逆者',
+    subtitle: '你从废墟上站起来的样子，比从没摔倒更好看',
+    traits: { 韧性值: 95, 破坏力: 82, 重生力: 90, 服从度: 22, 不屈值: 94 },
+    colors: ['#ef4444', '#eab308', '#f97316'],
+    secrets: [
+      '你经历过一次重大的"崩塌"，之后的你和之前判若两人',
+      '你嘴上说"无所谓"的事情，其实曾经让你痛了很久',
+      '你在最低谷的时候暗暗发过一个誓，现在你还记得',
+      '你对"乖"这个字有一种本能的反感',
+      '你曾故意切断过去的某段关系或身份，是为了逼自己往前走',
+      '你现在展现出来的强大，有一半是真的强大，一半是"绝不回到过去"的恐惧驱动的',
+      '你身上有一种别人说不清但能感受到的"经历过事"的气质',
+    ],
+    quotes: [
+      '每一次坍塌都是一次重新设计自己的机会。',
+      '你不是活下来了，你是赢了——赢了那个想让你放弃的自己。',
+      '灰烬不是结局，是种子。',
+    ]
+  },
+  cloud_drifter: {
+    icon: '☁️',
+    type: '云端漫步者',
+    subtitle: '你看起来在这里，灵魂却在另一个次元',
+    traits: { 想象力: 95, 专注度: 35, 灵性值: 88, 务实度: 30, 自洽力: 85 },
+    colors: ['#a78bfa', '#e2e8f0', '#06b6d4'],
+    secrets: [
+      '你有一个完整的内心世界，里面的剧情比现实丰富得多',
+      '别人以为你在听他们说话时，你有50%的概率在神游',
+      '你有些爱好/想法从来没告诉任何人，因为觉得"他们不会懂"',
+      '你经常迟到或忘记时间，不是故意的，是真的"消失"了一会儿',
+      '你对现实有一种淡淡的不满，但你也不确定想要什么代替它',
+      '你曾在完全不合适的场合突然想笑或想哭，因为脑子里在放另一出戏',
+      '你特别擅长"自己跟自己玩"——别人觉得你无聊的时候你其实挺忙的',
+    ],
+    quotes: [
+      '你不是不在这里，你是同时在这里和很多别的地方。',
+      '脚踏实地是一种选择，脚踩云端也是。',
+      '地球太小了，装不下你的内心戏。',
+    ]
+  },
+};
+
+// ========== 状态管理 ==========
+
+let currentImageTest = null;
+let currentWords = [];
+let currentDoors = [];
+let currentDrawPrompt = null;
+
+let userChoices = {
+  drawData: null,
+  drawTraits: null,
+  colors: [],
+  imageChoice: null,
+  wordChoice: null,
+  doorChoice: null
+};
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pickRandom(arr, n) {
+  return shuffle(arr).slice(0, n);
+}
+
+function randomizeQuestions() {
+  currentImageTest = IMAGE_TESTS[Math.floor(Math.random() * IMAGE_TESTS.length)];
+  currentWords = pickRandom(ALL_WORDS, 10);
+  currentDoors = pickRandom(ALL_DOORS, 4);
+  currentDrawPrompt = DRAW_PROMPTS[Math.floor(Math.random() * DRAW_PROMPTS.length)];
+}
+
+// ========== 画板 ==========
+
+let canvas, ctx;
+let drawing = false;
+let paths = [];
+let currentPath = [];
+
+function initCanvas() {
+  canvas = document.getElementById('drawCanvas');
+  const wrap = canvas.parentElement;
+  const rect = wrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#a78bfa';
+
+  canvas.addEventListener('pointerdown', startDraw);
+  canvas.addEventListener('pointermove', doDraw);
+  canvas.addEventListener('pointerup', endDraw);
+  canvas.addEventListener('pointerleave', endDraw);
+}
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function startDraw(e) {
+  drawing = true;
+  currentPath = [getPos(e)];
+  ctx.beginPath();
+  ctx.moveTo(currentPath[0].x, currentPath[0].y);
+}
+
+function doDraw(e) {
+  if (!drawing) return;
+  const pos = getPos(e);
+  currentPath.push(pos);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+}
+
+function endDraw() {
+  if (!drawing) return;
+  drawing = false;
+  if (currentPath.length > 1) {
+    paths.push([...currentPath]);
+  }
+  currentPath = [];
+}
+
+function clearCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  paths = [];
+}
+
+function undoCanvas() {
+  paths.pop();
+  redrawCanvas();
+}
+
+function redrawCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  for (const path of paths) {
+    ctx.beginPath();
+    ctx.moveTo(path[0].x, path[0].y);
+    for (let i = 1; i < path.length; i++) {
+      ctx.lineTo(path[i].x, path[i].y);
+    }
+    ctx.stroke();
+  }
+}
+
+function analyzeDrawing() {
+  if (paths.length === 0) return { shape: 'none', energy: 'low', style: 'minimal' };
+
+  let totalPoints = 0;
+  let totalLength = 0;
+  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+  let dirChanges = 0;
+
+  for (const path of paths) {
+    totalPoints += path.length;
+    for (let i = 1; i < path.length; i++) {
+      const dx = path[i].x - path[i-1].x;
+      const dy = path[i].y - path[i-1].y;
+      totalLength += Math.sqrt(dx*dx + dy*dy);
+      if (path[i].x < xMin) xMin = path[i].x;
+      if (path[i].x > xMax) xMax = path[i].x;
+      if (path[i].y < yMin) yMin = path[i].y;
+      if (path[i].y > yMax) yMax = path[i].y;
+    }
+    for (let i = 2; i < path.length; i++) {
+      const d1x = path[i-1].x - path[i-2].x;
+      const d1y = path[i-1].y - path[i-2].y;
+      const d2x = path[i].x - path[i-1].x;
+      const d2y = path[i].y - path[i-1].y;
+      const cross = d1x * d2y - d1y * d2x;
+      if (Math.abs(cross) > 5) dirChanges++;
+    }
+  }
+
+  const width = xMax - xMin;
+  const height = yMax - yMin;
+  const area = width * height;
+  const density = totalPoints / Math.max(area, 1) * 1000;
+  const complexity = dirChanges / Math.max(totalPoints, 1);
+
+  let energy = totalLength > 500 ? 'high' : totalLength > 200 ? 'medium' : 'low';
+  let style = complexity > 0.3 ? 'chaotic' : paths.length > 3 ? 'detailed' : 'simple';
+  let shape = width/height > 1.5 ? 'wide' : height/width > 1.5 ? 'tall' : 'balanced';
+
+  return { energy, style, shape, totalLength, paths: paths.length, density };
+}
+
+function submitDraw() {
+  if (paths.length === 0) {
+    showToast('画点什么吧，随便画就好~');
+    return;
+  }
+  userChoices.drawTraits = analyzeDrawing();
+  showPage('page-color');
+}
+
+// ========== 颜色选择 ==========
+
+function initColors() {
+  const grid = document.getElementById('colorGrid');
+  grid.innerHTML = '';
+  COLORS.forEach((c, i) => {
+    const div = document.createElement('div');
+    div.className = 'color-card';
+    div.style.background = c.hex;
+    div.dataset.index = i;
+    div.onclick = () => toggleColor(i, div);
+    grid.appendChild(div);
+  });
+}
+
+function toggleColor(index, el) {
+  const selected = userChoices.colors;
+  const pos = selected.indexOf(index);
+  if (pos > -1) {
+    selected.splice(pos, 1);
+    el.classList.remove('selected');
+  } else {
+    if (selected.length >= 3) return;
+    selected.push(index);
+    el.classList.add('selected');
+  }
+  const btn = document.getElementById('btnColor');
+  btn.textContent = `已选 ${selected.length}/3`;
+  btn.disabled = selected.length < 3;
+
+  document.querySelectorAll('.color-card').forEach((card, i) => {
+    if (selected.length >= 3 && !selected.includes(i)) {
+      card.classList.add('disabled');
+    } else {
+      card.classList.remove('disabled');
+    }
+  });
+}
+
+function submitColor() {
+  if (userChoices.colors.length < 3) return;
+  showPage('page-image');
+}
+
+// ========== 图片联想 ==========
+
+function initImage() {
+  const test = currentImageTest;
+  const container = document.getElementById('imageOptions');
+  document.querySelector('#page-image h2').textContent = test.question;
+
+  container.innerHTML = '';
+  test.options.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = 'image-option';
+    div.innerHTML = `<div style="text-align:center"><div style="font-size:40px;margin-bottom:8px">${opt.icon}</div><div style="font-size:13px;color:#cbd5e1">${opt.text}</div></div>`;
+    div.onclick = () => {
+      document.querySelectorAll('.image-option').forEach(d => d.classList.remove('selected'));
+      div.classList.add('selected');
+      userChoices.imageChoice = opt.trait;
+      setTimeout(() => showPage('page-word'), 400);
+    };
+    container.appendChild(div);
+  });
+}
+
+// ========== 词云选择 ==========
+
+function initWords() {
+  const cloud = document.getElementById('wordCloud');
+  cloud.innerHTML = '';
+  currentWords.forEach((w) => {
+    const span = document.createElement('span');
+    span.className = 'word-tag';
+    span.textContent = w.text;
+    span.onclick = () => {
+      document.querySelectorAll('.word-tag').forEach(s => s.classList.remove('selected'));
+      span.classList.add('selected');
+      userChoices.wordChoice = w.trait;
+      setTimeout(() => showPage('page-door'), 400);
+    };
+    cloud.appendChild(span);
+  });
+}
+
+// ========== 门选择 ==========
+
+function initDoors() {
+  const container = document.getElementById('doorOptions');
+  container.innerHTML = '';
+  currentDoors.forEach((d) => {
+    const div = document.createElement('div');
+    div.className = 'door-card';
+    div.innerHTML = `<div class="door-icon" style="text-shadow: 0 0 20px ${d.color}">${d.icon}</div><div class="door-label" style="color:${d.color}">${d.label}</div>`;
+    div.onclick = () => {
+      document.querySelectorAll('.door-card').forEach(c => c.classList.remove('selected'));
+      div.classList.add('selected');
+      userChoices.doorChoice = d.trait;
+      setTimeout(() => startLoading(), 500);
+    };
+    container.appendChild(div);
+  });
+}
+
+// ========== 加载动画 ==========
+
+const LOADING_STEPS = [
+  { text: '正在连接神经网络...', detail: '建立潜意识通道' },
+  { text: '扫描绘画特征...', detail: '分析笔触压力与方向' },
+  { text: '解码色彩偏好...', detail: '提取情感光谱数据' },
+  { text: '深层意象解析中...', detail: '匹配心理原型数据库' },
+  { text: '计算灵魂频率...', detail: '生成专属读心报告' },
+];
+
+function startLoading() {
+  showPage('page-loading');
+  let step = 0;
+  const bar = document.getElementById('loadingBar');
+
+  function nextStep() {
+    if (step >= LOADING_STEPS.length) {
+      setTimeout(() => generateReport(), 500);
+      return;
+    }
+    document.getElementById('loadingText').textContent = LOADING_STEPS[step].text;
+    document.getElementById('loadingDetail').textContent = LOADING_STEPS[step].detail;
+    bar.style.width = ((step + 1) / LOADING_STEPS.length * 100) + '%';
+    step++;
+    setTimeout(nextStep, 800 + Math.random() * 600);
+  }
+  nextStep();
+}
+
+// ========== 生成报告 ==========
+
+function generateReport() {
+  const scores = {};
+  const keys = Object.keys(PERSONALITIES);
+  keys.forEach(k => scores[k] = 0);
+
+  // 画板分析影响
+  const draw = userChoices.drawTraits || {};
+  if (draw.energy === 'high') {
+    scores.fire_warrior += 3; scores.chaos_artist += 2; scores.phoenix_rebel += 2; scores.flame_romantic += 1;
+  }
+  if (draw.energy === 'medium') {
+    scores.shadow_mirror += 1; scores.time_wanderer += 1; scores.crystal_analyst += 1;
+  }
+  if (draw.energy === 'low') {
+    scores.ocean_sage += 2; scores.garden_healer += 2; scores.cloud_drifter += 2; scores.time_wanderer += 1;
+  }
+  if (draw.style === 'chaotic') {
+    scores.chaos_artist += 3; scores.mystic_dreamer += 1; scores.cloud_drifter += 2; scores.flame_romantic += 1;
+  }
+  if (draw.style === 'simple') {
+    scores.ocean_sage += 2; scores.wild_wolf += 2; scores.garden_healer += 1;
+  }
+  if (draw.style === 'detailed') {
+    scores.crystal_analyst += 3; scores.mystic_dreamer += 1; scores.time_wanderer += 1;
+  }
+  if (draw.shape === 'wide') { scores.fire_warrior += 1; scores.phoenix_rebel += 1; }
+  if (draw.shape === 'tall') { scores.mystic_dreamer += 1; scores.cloud_drifter += 1; }
+  if (draw.shape === 'balanced') { scores.shadow_mirror += 1; scores.crystal_analyst += 1; }
+
+  // 颜色影响
+  userChoices.colors.forEach(ci => {
+    const trait = COLORS[ci].trait;
+    switch(trait) {
+      case 'passion': scores.fire_warrior += 2; scores.flame_romantic += 2; scores.phoenix_rebel += 1; break;
+      case 'energy': scores.fire_warrior += 2; scores.phoenix_rebel += 1; break;
+      case 'intuition': scores.mystic_dreamer += 2; scores.cloud_drifter += 1; break;
+      case 'depth': scores.shadow_mirror += 2; scores.ocean_sage += 1; scores.wild_wolf += 1; break;
+      case 'wisdom': scores.ocean_sage += 2; scores.crystal_analyst += 1; break;
+      case 'clarity': scores.crystal_analyst += 2; scores.ocean_sage += 1; break;
+      case 'harmony': scores.garden_healer += 2; scores.time_wanderer += 1; break;
+      case 'romance': scores.flame_romantic += 2; scores.garden_healer += 1; break;
+      case 'optimism': scores.chaos_artist += 2; scores.cloud_drifter += 1; break;
+    }
+  });
+
+  // 图片联想影响
+  switch(userChoices.imageChoice) {
+    case 'seeker': scores.mystic_dreamer += 3; scores.crystal_analyst += 1; scores.time_wanderer += 1; break;
+    case 'dynamic': scores.fire_warrior += 2; scores.phoenix_rebel += 2; scores.chaos_artist += 1; break;
+    case 'balanced': scores.ocean_sage += 2; scores.garden_healer += 1; scores.shadow_mirror += 1; break;
+    case 'dreamer': scores.cloud_drifter += 2; scores.flame_romantic += 2; scores.mystic_dreamer += 1; break;
+  }
+
+  // 词语影响
+  switch(userChoices.wordChoice) {
+    case 'freedom': scores.chaos_artist += 2; scores.wild_wolf += 1; break;
+    case 'wild': scores.wild_wolf += 2; scores.chaos_artist += 1; break;
+    case 'warmth': scores.garden_healer += 2; scores.flame_romantic += 1; break;
+    case 'rhythm': scores.time_wanderer += 2; scores.garden_healer += 1; break;
+    case 'edge': scores.fire_warrior += 2; scores.phoenix_rebel += 1; break;
+    case 'fire': scores.phoenix_rebel += 2; scores.fire_warrior += 1; break;
+    case 'mystery': scores.mystic_dreamer += 2; scores.shadow_mirror += 1; break;
+    case 'ethereal': scores.cloud_drifter += 2; scores.mystic_dreamer += 1; break;
+    case 'aspiration': scores.time_wanderer += 2; scores.flame_romantic += 1; break;
+    case 'anchor': scores.ocean_sage += 2; scores.wild_wolf += 1; break;
+    case 'rebel': scores.phoenix_rebel += 3; scores.chaos_artist += 1; break;
+    case 'drift': scores.cloud_drifter += 2; scores.time_wanderer += 1; break;
+    case 'obsession': scores.fire_warrior += 1; scores.flame_romantic += 2; break;
+    case 'clarity_w': scores.crystal_analyst += 2; scores.ocean_sage += 1; break;
+  }
+
+  // 门选择影响
+  switch(userChoices.doorChoice) {
+    case 'mystic': scores.mystic_dreamer += 3; scores.shadow_mirror += 1; scores.cloud_drifter += 1; break;
+    case 'thinker': scores.ocean_sage += 2; scores.crystal_analyst += 2; scores.time_wanderer += 1; break;
+    case 'healer': scores.garden_healer += 3; scores.flame_romantic += 1; break;
+    case 'warrior': scores.fire_warrior += 2; scores.phoenix_rebel += 2; scores.wild_wolf += 1; break;
+  }
+
+  // 找最高分
+  let maxKey = keys[0];
+  keys.forEach(k => { if (scores[k] > scores[maxKey]) maxKey = k; });
+
+  renderReport(PERSONALITIES[maxKey]);
+}
+
+function renderReport(p) {
+  const card = document.getElementById('reportCard');
+  let traitsHtml = '';
+  Object.entries(p.traits).forEach(([label, value]) => {
+    const hue = value > 70 ? '270' : value > 50 ? '220' : '160';
+    traitsHtml += `
+      <div class="trait-bar">
+        <span class="trait-label">${label}</span>
+        <div class="trait-track"><div class="trait-fill" style="width:${value}%;background:hsl(${hue},70%,60%)"></div></div>
+        <span class="trait-value">${value}%</span>
+      </div>`;
+  });
+
+  const selectedSecrets = pickRandom(p.secrets, 3);
+  const selectedQuote = p.quotes[Math.floor(Math.random() * p.quotes.length)];
+
+  let secretsHtml = selectedSecrets.map(s => `<li>「${s}」</li>`).join('');
+  let colorsHtml = p.colors.map(c => `<div class="soul-color" style="background:${c}"></div>`).join('');
+
+  card.innerHTML = `
+    <div class="report-header">
+      <div class="report-avatar" style="background:linear-gradient(135deg,${p.colors[0]},${p.colors[1]})">${p.icon}</div>
+      <div class="report-type">${p.type}</div>
+      <div class="report-subtitle">${p.subtitle}</div>
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">📊 灵魂数据</div>
+      ${traitsHtml}
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">🔓 你没说但我知道的事</div>
+      <ul class="secret-list">${secretsHtml}</ul>
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">🎨 灵魂配色</div>
+      <div class="soul-colors">${colorsHtml}</div>
+    </div>
+
+    <div class="report-quote">"${selectedQuote}"</div>
+  `;
+
+  showPage('page-report');
+
+  setTimeout(() => {
+    document.querySelectorAll('.trait-fill').forEach(el => {
+      el.style.width = el.style.width;
+    });
+  }, 100);
+}
+
+// ========== 通用函数 ==========
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function startTest() {
+  randomizeQuestions();
+  document.querySelector('#page-draw h2').textContent = currentDrawPrompt.title;
+  document.querySelector('#page-draw .canvas-hint').textContent = currentDrawPrompt.hint;
+  initColors();
+  initImage();
+  initWords();
+  initDoors();
+  showPage('page-draw');
+  setTimeout(initCanvas, 100);
+}
+
+function restart() {
+  userChoices = { drawData: null, drawTraits: null, colors: [], imageChoice: null, wordChoice: null, doorChoice: null };
+  paths = [];
+  currentPath = [];
+  randomizeQuestions();
+  initColors();
+  initImage();
+  initWords();
+  initDoors();
+  showPage('page-intro');
+}
+
+function saveReport() {
+  showToast('长按截图保存分享~');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ========== 星空背景 ==========
+
+function createStars() {
+  const container = document.getElementById('stars');
+  for (let i = 0; i < 80; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.setProperty('--duration', (2 + Math.random() * 3) + 's');
+    star.style.animationDelay = Math.random() * 2 + 's';
+    container.appendChild(star);
+  }
+}
+
+// ========== 初始化 ==========
+
+createStars();
+randomizeQuestions();
+initColors();
+initImage();
+initWords();
+initDoors();
+</script>
+</body>
+</html>
