@@ -435,12 +435,48 @@ h2 {
 }
 
 /* 报告页 */
+.report-reveal {
+  text-align: center;
+  padding: 20px 0 10px;
+  animation: revealPulse 1.5s ease-in-out;
+}
+
+.report-reveal .reveal-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+  animation: revealBounce 0.8s ease;
+}
+
+.report-reveal .reveal-text {
+  font-size: 16px;
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+@keyframes revealPulse {
+  0% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes revealBounce {
+  0% { transform: translateY(-20px); opacity: 0; }
+  60% { transform: translateY(5px); }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
 .report-card {
   background: linear-gradient(135deg, #1e1b4b, #0f172a);
   border: 1px solid #4c1d95;
   border-radius: 20px;
   padding: 24px;
   margin-bottom: 16px;
+  animation: cardSlideUp 0.8s ease 0.3s both;
+}
+
+@keyframes cardSlideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .report-header {
@@ -722,10 +758,14 @@ h2 {
 
   <!-- 报告页 -->
   <div class="page" id="page-report">
-    <h2 style="margin-bottom:20px;">🔮 读心报告</h2>
+    <div class="report-reveal">
+      <div class="reveal-icon">🔮</div>
+      <div class="reveal-text">你的灵魂已被读取</div>
+    </div>
     <div class="report-card" id="reportCard"></div>
-    <button class="btn-primary" onclick="saveReport()" style="margin-bottom:12px;">保存报告截图</button>
-    <button class="btn-restart" onclick="restart()">再测一次</button>
+    <div style="text-align:center;color:#64748b;font-size:12px;margin:12px 0 16px;">↓ 长按报告可截图分享 ↓</div>
+    <button class="btn-primary" onclick="saveReport()" style="margin-bottom:12px;">📸 保存报告截图</button>
+    <button class="btn-restart" onclick="restart()">🔄 再测一次</button>
   </div>
 </div>
 
@@ -1540,6 +1580,7 @@ function renderReport(p) {
     document.querySelectorAll('.trait-fill').forEach(el => {
       el.style.width = el.style.width;
     });
+    document.getElementById('reportCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 100);
 }
 
